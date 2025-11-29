@@ -157,12 +157,39 @@ def bruteforce(ciphertext: str, max_key_len: int = 16, top: int = 10) -> List[Tu
     results.sort(reverse=True, key=lambda x: x[0])
     return results[:top]
 
-# Algorithmic flow of analysis.py:
-# 1. Kasiski Examination: Identify repeated sequences in the ciphertext and calculate distances between them to suggest possible key lengths.
-# 2. Index of Coincidence (IC): For each candidate key length, split the ciphertext into cosets and compute the average IC to further validate key length candidates.
-# 3. Candidate Key Lengths: Combine results from Kasiski and IC methods to generate a list of candidate key lengths.
-# 4. Chi-Square Analysis: For each coset corresponding to a candidate key length, perform chi-square analysis to determine the most likely Caesar shift, thereby deriving the key.
-# 5. Key Derivation: Construct the full Vigenere key from the best shifts found for each coset.
-# 6. English Scoring: Decrypt the ciphertext with the derived key and score the resulting plaintext for English-likeness using common words and letter frequencies.
-# 7. Brute Force Attempt: For each candidate key length, derive the key, decrypt the ciphertext, and score the plaintext, returning the top results.
-# This structured approach allows for systematic analysis and potential decryption of Vigenere ciphers.
+# Algorithmic Flow of analysis.py:
+
+# 1. Kasiski Examination:
+#    - Locate repeated substrings of length 3–5 in the ciphertext.
+#    - Compute distances between their occurrences.
+#    - Distances whose factors repeat frequently indicate likely key lengths.
+
+# 2. Index of Coincidence (IC):
+#    - For each possible key length, split the ciphertext into cosets.
+#    - Compute IC for each coset and average the values.
+#    - Correct key lengths produce IC values close to English (≈0.065), 
+#      while incorrect lengths behave like random text (≈0.038).
+
+# 3. Candidate Key Lengths:
+#    - Merge top Kasiski factors and highest-IC lengths.
+#    - Deduplicate results and preserve priority ordering.
+
+# 4. Chi-Square Analysis:
+#    - For each coset under each candidate key length, test all 26 Caesar shifts.
+#    - Compute chi-square deviation from English letter frequency.
+#    - The shift with the lowest score is the most likely.
+
+# 5. Key Derivation:
+#    - Combine best shifts for all cosets to reconstruct the full Vigenère key.
+
+# 6. English Scoring:
+#    - Decrypt the ciphertext with the derived key.
+#    - Score plaintext using common English phrases and high-frequency letters.
+#    - Higher scores indicate more natural English.
+
+# 7. Brute Force Attempt:
+#    - For each candidate key length: derive key → decrypt → score.
+#    - Sort results by English score and return top candidates.
+
+# This workflow systematically combines classical cryptanalytic heuristics
+# (Kasiski, Friedman IC, chi-square analysis) to reverse-engineer Vigenère keys.
