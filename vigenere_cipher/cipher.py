@@ -27,9 +27,9 @@ def vigenere_encrypt(plaintext: str, key: str) -> str:
     j = 0
     for ch in plaintext:
         if ch.isalpha():
-            shift = shifts[j % len(shifts)]
+            shift = shifts[j % len(shifts)] # lặp lại key nếu key ngắn hơn plaintext
             base = ord("A") if ch.isupper() else ord("a")
-            result.append(chr((ord(ch) - base + shift) % 26 + base))
+            result.append(chr((ord(ch) - base + shift) % 26 + base)) # dịch chuyển Caesar
             j += 1
         else:
             result.append(ch)
@@ -54,7 +54,7 @@ def vigenere_decrypt(ciphertext: str, key: str) -> str:
         if ch.isalpha():
             shift = shifts[j % len(shifts)]
             base = ord("A") if ch.isupper() else ord("a")
-            result.append(chr((ord(ch) - base - shift) % 26 + base))
+            result.append(chr((ord(ch) - base - shift) % 26 + base)) # dịch chuyển ngược Caesar
             j += 1
         else:
             result.append(ch)

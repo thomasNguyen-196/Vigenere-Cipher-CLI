@@ -32,23 +32,23 @@ def kasiski_examination(ciphertext: str, min_len: int = 3, max_len: int = 5, max
     text = _letters_only(ciphertext)
     repeats = defaultdict(list)
     for size in range(min_len, max_len + 1):
-        for i in range(len(text) - size + 1):
+        for i in range(len(text) - size + 1): # Sliding windows
             seq = text[i:i + size]
-            repeats[seq].append(i)
+            repeats[seq].append(i) # Store positions (starting indeces) of each sub-string in (cipher)text
 
     distances = []
     for positions in repeats.values():
-        if len(positions) < 2:
+        if len(positions) < 2: # Need at least two occurrences to measure distance
             continue
-        for i in range(len(positions) - 1):
+        for i in range(len(positions) - 1): # Compute distances between each pair of occurrences
             distances.append(positions[i + 1] - positions[i])
 
-    factors = Counter()
+    factors = Counter() # hashmap of factor -> count
     for d in distances:
         for f in range(2, max_key + 1):
             if d % f == 0:
                 factors[f] += 1
-    return sorted(factors.items(), key=lambda x: x[1], reverse=True)
+    return sorted(factors.items(), key=lambda x: x[1], reverse=True) # Sort by count descending - data structure is (factor, count)
 
 
 def index_of_coincidence(seq: str) -> float:
@@ -57,7 +57,7 @@ def index_of_coincidence(seq: str) -> float:
     if n <= 1:
         return 0.0
     counts = Counter(seq)
-    return sum(c * (c - 1) for c in counts.values()) / (n * (n - 1))
+    return sum(c * (c - 1) for c in counts.values()) / (n * (n - 1)) # IC formula
 
 
 def average_ic_for_keylen(ciphertext: str, key_len: int) -> float:
@@ -81,12 +81,12 @@ def chi_square_score(seq: str, shift: int) -> float:
         return float("inf")
     shifted_counts = Counter()
     for ch in seq:
-        shifted = (ord(ch) - ord("A") - shift) % 26
+        shifted = (ord(ch) - ord("A") - shift) % 26 # Reverse Caesar shift
         shifted_counts[chr(shifted + ord("A"))] += 1
     n = len(seq)
     score = 0.0
     for letter, expected_freq in ENGLISH_FREQ.items():
-        observed = shifted_counts.get(letter, 0)
+        observed = shifted_counts.get(letter, 0) # The 0 parameter is the default value if letter not found
         expected = expected_freq * n
         if expected > 0:
             score += (observed - expected) ** 2 / expected
@@ -96,14 +96,14 @@ def chi_square_score(seq: str, shift: int) -> float:
 def derive_key_for_length(ciphertext: str, key_len: int) -> str:
     """Finds best key (as uppercase letters) for a given length using chi-square per coset."""
     text = _letters_only(ciphertext)
-    buckets = [[] for _ in range(key_len)]
+    buckets = [[] for _ in range(key_len)] # Create cosets (2D list)
     for idx, ch in enumerate(text):
         buckets[idx % key_len].append(ch)
 
     key_chars = []
     for bucket in buckets:
         seq = "".join(bucket)
-        best_shift = min(range(26), key=lambda s: chi_square_score(seq, s))
+        best_shift = min(range(26), key=lambda s: chi_square_score(seq, s)) # Find shift (26 values 0 - 25) with lowest chi-square
         key_chars.append(chr(best_shift + ord("A")))
     return "".join(key_chars)
 
@@ -126,13 +126,13 @@ def candidate_key_lengths(ciphertext: str, max_key_len: int = 16, top_ic: int = 
     Returns a merged list of candidate key lengths using IC ranking and Kasiski factors.
     """
     ic_scores = [(k, average_ic_for_keylen(ciphertext, k)) for k in range(1, max_key_len + 1)]
-    ic_scores.sort(key=lambda x: x[1], reverse=True)
+    ic_scores.sort(key=lambda x: x[1], reverse=True) # Sort by IC descending
     kasiski = kasiski_examination(ciphertext, max_key=max_key_len)
 
     candidates = []
-    for k, _ in ic_scores[:top_ic]:
+    for k, _ in ic_scores[:top_ic]: # Top 5 IC scores
         candidates.append(k)
-    for k, _ in kasiski[:top_ic]:
+    for k, _ in kasiski[:top_ic]: # Top 5 Kasiski factors
         candidates.append(k)
 
     seen = set()
@@ -156,3 +156,13 @@ def bruteforce(ciphertext: str, max_key_len: int = 16, top: int = 10) -> List[Tu
         results.append((score, key, plaintext))
     results.sort(reverse=True, key=lambda x: x[0])
     return results[:top]
+
+# Algorithmic flow of analysis.py:
+# 1. Kasiski Examination: Identify repeated sequences in the ciphertext and calculate distances between them to suggest possible key lengths.
+# 2. Index of Coincidence (IC): For each candidate key length, split the ciphertext into cosets and compute the average IC to further validate key length candidates.
+# 3. Candidate Key Lengths: Combine results from Kasiski and IC methods to generate a list of candidate key lengths.
+# 4. Chi-Square Analysis: For each coset corresponding to a candidate key length, perform chi-square analysis to determine the most likely Caesar shift, thereby deriving the key.
+# 5. Key Derivation: Construct the full Vigenere key from the best shifts found for each coset.
+# 6. English Scoring: Decrypt the ciphertext with the derived key and score the resulting plaintext for English-likeness using common words and letter frequencies.
+# 7. Brute Force Attempt: For each candidate key length, derive the key, decrypt the ciphertext, and score the plaintext, returning the top results.
+# This structured approach allows for systematic analysis and potential decryption of Vigenere ciphers.
